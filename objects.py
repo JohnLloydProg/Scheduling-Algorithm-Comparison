@@ -69,48 +69,13 @@ class ProcessCard(tk.Frame):
 
 
 class ModifyWindow(tk.Toplevel):
-    def __init__(self, processes:list[Process], settings:dict, process_table):
+    def __init__(self, processes:list[Process], process_table):
         super().__init__()
         self.processes = processes
-        self.mlfq = mlfq
-        self.settings = settings
         self.outer_process_table = process_table
 
         self.title("Modify Processes & Parameters")
         self.geometry("900x500")
-
-        # Parameters
-        param_frame = tk.Frame(self)
-        param_frame.pack(side=tk.TOP, fill=tk.X, pady=10)
-        tk.Label(param_frame, text="Queue1 Quantum:").pack(side=tk.LEFT)
-        self.q0_entry = tk.Entry(param_frame, width=5)
-        self.q0_entry.insert(0, str(mlfq[1]["quantum_time"]))
-        self.q0_entry.pack(side=tk.LEFT, padx=5)
-
-        tk.Label(param_frame, text="Queue2 Quantum:").pack(side=tk.LEFT)
-        self.q1_entry = tk.Entry(param_frame, width=5)
-        self.q1_entry.insert(0, str(mlfq[2]["quantum_time"]))
-        self.q1_entry.pack(side=tk.LEFT, padx=5)
-
-        tk.Label(param_frame, text="Queue3 Quantum:").pack(side=tk.LEFT)
-        self.q2_entry = tk.Entry(param_frame, width=5)
-        self. q2_entry.insert(0, str(mlfq[3]["quantum_time"]))
-        self.q2_entry.pack(side=tk.LEFT, padx=5)
-
-        tk.Label(param_frame, text="Queue4 Quantum:").pack(side=tk.LEFT)
-        self.q3_entry = tk.Entry(param_frame, width=5)
-        self. q3_entry.insert(0, str(mlfq[4]["quantum_time"]))
-        self.q3_entry.pack(side=tk.LEFT, padx=5)
-
-        tk.Label(param_frame, text="Aging Time:").pack(side=tk.LEFT)
-        self.aging_entry = tk.Entry(param_frame, width=5)
-        self.aging_entry.insert(0, str(self.settings.get("aging_time")))
-        self.aging_entry.pack(side=tk.LEFT, padx=5)
-
-        tk.Label(param_frame, text="Lower Priority Time:").pack(side=tk.LEFT)
-        self.lower_priority_entry = tk.Entry(param_frame, width=5)
-        self.lower_priority_entry.insert(0, str(self.settings.get("lower_priority_time")))
-        self.lower_priority_entry.pack(side=tk.LEFT, padx=5)
 
         # Process Table
         table_frame = tk.Frame(self)
@@ -190,23 +155,6 @@ class ModifyWindow(tk.Toplevel):
                 except ValueError:
                     messagebox.showerror("Error", f"Invalid input in process {pid}")
                     return
-
-        try:
-            q0_val, q1_val, q2_val, q3_val = int(self.q0_entry.get()), int(self.q1_entry.get()), int(self.q2_entry.get()), int(self.q3_entry.get())
-            aging_val = int(self.aging_entry.get())
-            lower_val = int(self.lower_priority_entry.get())
-            if min(q0_val, q1_val, q2_val, q3_val, aging_val, lower_val) <= 0:
-                messagebox.showerror("Error", "All times must be positive integers.")
-                return
-            self.mlfq[1]["quantum_time"] = q0_val
-            self.mlfq[2]["quantum_time"] = q1_val
-            self.mlfq[3]["quantum_time"] = q2_val
-            self.mlfq[4]["quantum_time"] = q3_val
-            self.settings['aging_time'] = aging_val
-            self.settings['lower_priority_time'] = lower_val
-        except ValueError:
-            messagebox.showerror("Error", "Quantum and Aging Time must be integers.")
-            return
         
         self.processes.clear()
         self.processes.extend(new_processes)
@@ -257,7 +205,7 @@ class GanttChart(tk.Canvas):
         self.create_window((0, 0), window=self.gantt_inner, anchor="nw")
         self.gantt_inner.bind("<Configure>", lambda event: self.configure(scrollregion=self.bbox("all")))
         self.stats = tk.StringVar()
-        self.stats_label = tk.Label(gantt_frame, textvariable=self.stats, font=("Arial", 12))
+        self.stats_label = tk.Label(gantt_frame, textvariable=self.stats, font=("Arial", 10))
     
     def all_pack(self):
         self.pack(side=tk.TOP, fill=tk.X)
@@ -266,14 +214,19 @@ class GanttChart(tk.Canvas):
 
 
 class ScedulingAlgorithm:
-    chart:GanttChart
-    queue_frame:tk.Frame
-    current_process:Process
-    current_card:GanttCard
+    chart:GanttChart = None
+    queue_frame:tk.Frame = None
+    current_process:Process = None
+    current_card:GanttCard = None
+    processes:list[Process]
     queue:list
 
-    def __init__(self):
+    def __init__(self, name):
         self.queue = []
+        self.name = name
+
+    def finished(self):
+        return all(process.is_completed() for process in self.processes)
 
     def process(self, sim_time):
         pass
@@ -284,7 +237,7 @@ class ScedulingAlgorithm:
 
 class FirstComeFirstServe(ScedulingAlgorithm):
     def __init__(self):
-        super().__init__()
+        super().__init__("First Come First Server")
     
     def process(self, sim_time):
         if (self.current_process):
