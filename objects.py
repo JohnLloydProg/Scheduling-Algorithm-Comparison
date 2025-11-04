@@ -197,71 +197,13 @@ class GanttCard(tk.Frame):
 class GanttChart(tk.Canvas):
     def __init__(self, gantt_frame, scheduling_algo:str):
         super().__init__(gantt_frame, bg='white', height=100)
-        tk.Label(gantt_frame, text=scheduling_algo, font=("Arial", 12)).pack(side=tk.TOP)
         self.scroll = tk.Scrollbar(gantt_frame, orient=tk.HORIZONTAL, command=self.xview)
         self.configure(xscrollcommand=self.scroll.set)
         
         self.gantt_inner = tk.Frame(self, bg="white")
         self.create_window((0, 0), window=self.gantt_inner, anchor="nw")
         self.gantt_inner.bind("<Configure>", lambda event: self.configure(scrollregion=self.bbox("all")))
-        self.stats = tk.StringVar()
-        self.stats_label = tk.Label(gantt_frame, textvariable=self.stats, font=("Arial", 10))
     
     def all_pack(self):
-        self.pack(side=tk.TOP, fill=tk.X)
+        self.pack(side=tk.TOP, fill=tk.X, expand=True)
         self.scroll.pack(side=tk.TOP, fill=tk.X)
-        self.stats_label.pack(pady=10, side=tk.TOP)
-
-
-class ScedulingAlgorithm:
-    chart:GanttChart = None
-    queue_frame:tk.Frame = None
-    current_process:Process = None
-    current_card:GanttCard = None
-    processes:list[Process]
-    queue:list
-
-    def __init__(self, name):
-        self.queue = []
-        self.name = name
-
-    def finished(self):
-        return all(process.is_completed() for process in self.processes)
-
-    def process(self, sim_time):
-        pass
-
-    def select(self) -> Process:
-        pass
-
-
-class FirstComeFirstServe(ScedulingAlgorithm):
-    def __init__(self):
-        super().__init__("First Come First Server")
-    
-    def process(self, sim_time):
-        if (self.current_process):
-            self.current_process.process()
-            if (self.current_card):
-                self.current_card.update_values()
-            if (self.current_process.is_completed()):
-                self.current_process.complete(sim_time)
-                self.current_process = self.select()
-                if (self.current_process):
-                    if (not self.current_process.first_response):
-                        self.current_process.first_response = sim_time
-        else:
-            self.current_process = self.select()
-            if (self.current_process):
-                if (not self.current_process.first_response):
-                    self.current_process.first_response = sim_time
-
-    def select(self):
-        assert self.chart != None
-        try:
-            current_process = self.queue.pop(0)
-            self.current_card = GanttCard(self.chart.gantt_inner, current_process)
-            return current_process
-        except:
-            return None
-

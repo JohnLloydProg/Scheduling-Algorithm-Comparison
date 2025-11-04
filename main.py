@@ -1,10 +1,17 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from objects import ProcessCard, Process, ModifyWindow, GanttCard, GanttChart, ScedulingAlgorithm, FirstComeFirstServe
+from objects import ProcessCard, Process, ModifyWindow, GanttCard, GanttChart
+from algorithms import ScedulingAlgorithm, FirstComeFirstServe, ShortestJobFirst, RoundRobin, ShortestRemainingTimeFirst, PriorityScheduling
 import copy
 import logging
 import random
 import sys
+
+
+window = tk.Tk()
+window.title("MLFQ Round Robin Scheduler")
+window.geometry("1080x720")
+window.wm_resizable(False, False)
 
 
 # Global Variables
@@ -17,7 +24,7 @@ processes:list[Process] = [
     Process("P6", 15, 8, 2), 
     Process("P7", 20, 4, 1)
 ]
-scheduling_algorithms:list[ScedulingAlgorithm] = [FirstComeFirstServe()]
+scheduling_algorithms:list[ScedulingAlgorithm] = [FirstComeFirstServe(), ShortestJobFirst(), RoundRobin(), ShortestRemainingTimeFirst(), PriorityScheduling()]
 current_card:GanttCard = None
 current_process:Process = None
 start_processing = None
@@ -73,17 +80,17 @@ def step():
     
     update_queue_display()
     time_var.set(f"Time: {sim_time}")
+    update_stats()
 
     
     if (all(algorithm.finished() for algorithm in scheduling_algorithms)):
         sim_running = False
         toggle.configure(state="normal")
         run_button.configure(text="Run MLFQ")
-        update_stats()
         time_var.set(f"Simulation finished at Time: {sim_time}")
     else:
         if (sim_automatic.get()):
-            root.after(750, step)
+            window.after(750, step)
 
     sim_time += 1
 
@@ -134,7 +141,7 @@ def update_stats():
         avg_wait = total_wait / n if n else 0
         avg_turnaround = total_turnaround / n if n else 0
         avg_response = total_response / n if n else 0
-        algorithm.chart.stats.set(f"Avg Waiting Time: {avg_wait:.2f} | Avg Turnaround Time: {avg_turnaround:.2f} | Avg Response Time: {avg_response:.2f}")
+        algorithm.stats.set(f"Avg Waiting Time: {avg_wait:.2f} | Avg Turnaround Time: {avg_turnaround:.2f} | Avg Response Time: {avg_response:.2f}")
 
 
 def toggle_action():
@@ -145,12 +152,26 @@ def toggle_action():
         toggle.configure(text="Step-By-Step", relief=tk.RAISED)
         step_button.configure(state="normal")
 
+def scroll_canvas(event):
+    widget = event.widget.winfo_containing(event.x_root, event.y_root)
+    if widget != process_table and widget != scrollbar:
+        canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
 
 # GUI
-root = tk.Tk()
-root.title("MLFQ Round Robin Scheduler")
-root.geometry("1080x720")
-root.wm_resizable(False, False)
+canvas = tk.Canvas(window)
+scrollbar = ttk.Scrollbar(window, orient="vertical", command=canvas.yview) 
+canvas.configure(yscrollcommand=scrollbar.set)
+canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+
+canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+canvas.bind_all("<MouseWheel>", scroll_canvas)
+
+root = tk.Frame(canvas)
+canvas.create_window((0,0), window=root, anchor="nw", width=1060)
 
 sim_automatic = tk.BooleanVar(value=True)
 
@@ -173,22 +194,9 @@ scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
 main_frame = tk.Frame(root)
 main_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-
-# Queue
-queue_frame = tk.Frame(main_frame, width=500)
-queue_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=10, pady=10)
-queue_frame.pack_propagate(False)
-for algorithm in scheduling_algorithms:
-    tk.Label(queue_frame, text=algorithm.name).pack()
-    algorithm.queue_frame = tk.Frame(queue_frame)
-    algorithm.queue_frame.pack(pady=5, fill=tk.X)
-
-# Time counter above Gantt chart
-gantt_frame = tk.Frame(main_frame)
-gantt_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+gantt_top_frame = tk.Frame(main_frame)
+gantt_top_frame.pack(anchor='center')
 time_var = tk.StringVar(value="Time:")
-gantt_top_frame = tk.Frame(gantt_frame)
-gantt_top_frame.pack(anchor='w', fill=tk.X)
 run_button = tk.Button(gantt_top_frame, text="Run MLFQ", command=simulate_mlfq_step)
 run_button.pack(side=tk.LEFT, padx=5, pady=5)
 toggle = tk.Checkbutton(gantt_top_frame, text="Automatic", variable=sim_automatic, command=toggle_action, indicatoron=0, relief=tk.SUNKEN, width=10)
@@ -197,10 +205,26 @@ step_button = tk.Button(gantt_top_frame, text="Step", command=step, state="disab
 step_button.pack(side=tk.LEFT, padx=5, pady=5)
 tk.Label(gantt_top_frame, textvariable=time_var, font=("Arial", 12)).pack(side=tk.LEFT)
 
-# Gantt chart scrollable
+# Queue
 for algorithm in scheduling_algorithms:
-    algorithm.chart = GanttChart(gantt_frame, "First Come First Serve")
+    algo_frame = tk.Frame(main_frame, bd=2, relief="groove")
+    algo_frame.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10)
+
+    tk.Label(algo_frame, text=algorithm.name, font=("Arial", 12, "bold")).pack(side=tk.TOP)
+
+    queue_frame = tk.Frame(algo_frame, width=500)
+    queue_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=10, pady=10)
+    queue_frame.pack_propagate(False)
+
+    algorithm.queue_frame = tk.Frame(queue_frame)
+    algorithm.queue_frame.pack(pady=5, fill=tk.X)
+
+    gantt_frame = tk.Frame(algo_frame)
+    gantt_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    algorithm.chart = GanttChart(gantt_frame, algorithm.name)
     algorithm.chart.all_pack()
+    tk.Label(main_frame, textvariable=algorithm.stats, font=("Arial", 12)).pack(pady=(10, 20), side=tk.TOP)
 
 update_process_table()
-root.mainloop()
+update_stats()
+window.mainloop()
