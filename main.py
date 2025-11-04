@@ -205,12 +205,13 @@ step_button = tk.Button(gantt_top_frame, text="Step", command=step, state="disab
 step_button.pack(side=tk.LEFT, padx=5, pady=5)
 tk.Label(gantt_top_frame, textvariable=time_var, font=("Arial", 12)).pack(side=tk.LEFT)
 
-# Queue
+
 for algorithm in scheduling_algorithms:
     algo_frame = tk.Frame(main_frame, bd=2, relief="groove")
     algo_frame.pack(side=tk.TOP, fill=tk.BOTH, padx=10, pady=10)
 
     tk.Label(algo_frame, text=algorithm.name, font=("Arial", 12, "bold")).pack(side=tk.TOP)
+    tk.Label(algo_frame, textvariable=algorithm.stats, font=("Arial", 12)).pack(pady=(10, 20), side=tk.TOP)
 
     queue_frame = tk.Frame(algo_frame, width=500)
     queue_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=10, pady=10)
@@ -223,7 +224,6 @@ for algorithm in scheduling_algorithms:
     gantt_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     algorithm.chart = GanttChart(gantt_frame, algorithm.name)
     algorithm.chart.all_pack()
-    tk.Label(main_frame, textvariable=algorithm.stats, font=("Arial", 12)).pack(pady=(10, 20), side=tk.TOP)
 
 update_process_table()
 update_stats()
