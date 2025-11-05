@@ -55,15 +55,12 @@ class ProcessCard(tk.Frame):
         self.burst_label.pack(anchor='w')
         self.processed_label = tk.Label(stats_frame, text=f"PT:{process.processed_time}")
         self.processed_label.pack(anchor='w')
-        self.wait_label = tk.Label(stats_frame, text=f"WT:{process.sub_wait_time}")
-        self.wait_label.pack(anchor='w')
         self.arrival_label = tk.Label(stats_frame, text=f"AT:{process.arrival_time}")
         self.arrival_label.pack(anchor='w')
         self.pack(side=tk.LEFT, padx=5)
     
     def update_values(self):
         self.burst_label.configure(text=f"BT:{self.process.burst_time}")
-        self.wait_label.configure(text=f"WT:{self.process.sub_wait_time}")
         self.processed_label.configure(text=f"PT:{self.process.processed_time}")
         self.arrival_label.configure(text=f"AT:{self.process.arrival_time}")
 
@@ -181,8 +178,6 @@ class GanttCard(tk.Frame):
         self.burst_label.pack(anchor='w')
         self.processed_label = tk.Label(stats, text=f"PT:{current_process.processed_time}", bg=color)
         self.processed_label.pack(anchor='w')
-        self.waiting_label = tk.Label(stats, text=f"WT:{current_process.sub_wait_time}", bg=color)
-        self.waiting_label.pack(anchor='w')
         self.arrival_label = tk.Label(stats, text=f"AT:{current_process.arrival_time}", bg=color)
         self.arrival_label.pack(anchor='w')
         self.pack(side=tk.LEFT, padx=2, pady=2)
@@ -190,7 +185,6 @@ class GanttCard(tk.Frame):
     def update_values(self):
         self.burst_label.configure(text=f"BT:{self.current_process.burst_time}")
         self.processed_label.configure(text=f"PT:{self.current_process.processed_time}")
-        self.waiting_label.configure(text=f"WT:{self.current_process.sub_wait_time}")
         self.arrival_label.configure(text=f"AT:{self.current_process.arrival_time}")
 
 
